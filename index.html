@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>オセロ</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: "Yu Gothic", sans-serif;
+    background: #f0f0f0;
+  }
+  h1 { margin-top: 20px; }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(8, 50px);
+    grid-template-rows: repeat(8, 50px);
+    gap: 2px;
+    margin-top: 20px;
+  }
+  .cell {
+    width: 50px;
+    height: 50px;
+    background: green;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  .black, .white {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+  .black { background: black; }
+  .white { background: white; }
+  #info { margin-top: 20px; font-size: 18px; }
+</style>
+</head>
+<body>
+
+<h1>オセロ</h1>
+<div id="board"></div>
+<div id="info">黒のターン</div>
+
+<script>
+const boardEl = document.getElementById("board");
+const infoEl = document.getElementById("info");
+
+let board = Array(8).fill(null).map(() => Array(8).fill(null));
+let currentPlayer = "black";
+
+// 初期配置
+board[3][3] = "white";
+board[3][4] = "black";
+board[4][3] = "black";
+board[4][4] = "white";
+
+const directions = [
+  [0,1],[1,0],[0,-1],[-1,0],
+  [1,1],[-1,-1],[1,-1],[-1,1]
+];
+
+function renderBoard() {
+  boardEl.innerHTML = "";
+  let hasValidMove = false;
+
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+
+      // 置ける場所をハイライト
+      if (board[y][x] === null && isValidMove(x, y, currentPlayer)) {
+        cell.style.background = "#00cc66"; // ハイライト色
+        hasValidMove = true;
+      }
+
+      if (board[y][x]) {
+        const disc = document.createElement("div");
+        disc.className = board[y][x];
+        cell.appendChild(disc);
+      }
+
+      cell.addEventListener("click", () => handleClick(x, y));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  if (!hasValidMove) {
+    currentPlayer = currentPlayer === "black" ? "white" : "black";
+    infoEl.innerText = `${currentPlayer === "black" ? "黒" : "白"}のターン（パス）`;
+  } else {
+    infoEl.innerText = `${currentPlayer === "black" ? "黒" : "白"}のターン`;
+  }
+
+  checkGameEnd();
+}
+
+function handleClick(x, y) {
+  if (board[y][x] !== null) return;
+  if (!isValidMove(x, y, currentPlayer)) return;
+
+  placeDisc(x, y, currentPlayer);
+  currentPlayer = currentPlayer === "black" ? "white" : "black";
+  renderBoard();
+}
+
+function isValidMove(x, y, player) {
+  for (let [dx, dy] of directions) {
+    let nx = x + dx, ny = y + dy, found = false;
+    while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+      if (board[ny][nx] === null) break;
+      if (board[ny][nx] !== player) { nx += dx; ny += dy; found = true; }
+      else { if (found) return true; break; }
+    }
+  }
+  return false;
+}
+
+function placeDisc(x, y, player) {
+  board[y][x] = player;
+  for (let [dx, dy] of directions) {
+    let nx = x + dx, ny = y + dy, toFlip = [];
+    while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
+      if (board[ny][nx] === null) break;
+      if (board[ny][nx] !== player) { toFlip.push([nx, ny]); nx += dx; ny += dy; }
+      else { 
+        if (toFlip.length > 0) { for (let [fx, fy] of toFlip) board[fy][fx] = player; }
+        break;
+      }
+    }
+  }
+}
+
+function hasValidMoveFor(player) {
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      if (board[y][x] === null && isValidMove(x, y, player)) return true;
+    }
+  }
+  return false;
+}
+
+function checkGameEnd() {
+  let black = 0, white = 0;
+  let hasEmpty = false;
+  for (let row of board) {
+    for (let cell of row) {
+      if (cell === "black") black++;
+      if (cell === "white") white++;
+      if (cell === null) hasEmpty = true;
+    }
+  }
+  if (!hasEmpty || (!hasValidMoveFor("black") && !hasValidMoveFor("white"))) {
+    let winner = black > white ? "黒" : black < white ? "白" : "引き分け";
+    infoEl.innerText = `ゲーム終了！ 黒: ${black} 白: ${white} → 勝者: ${winner}`;
+  }
+}
+
+renderBoard();
+</script>
+
+</body>
+</html>
+
